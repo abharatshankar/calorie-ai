@@ -39,3 +39,4 @@ API specifications, and the AI/prompt engineering approach.
 ## License
 
 The backend is released under the [MIT License](backend/LICENSE).
+# calorie-ai
