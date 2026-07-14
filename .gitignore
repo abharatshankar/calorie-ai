@@ -1,0 +1,7 @@
+# OS / editor cruft
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# Component-specific ignores live in backend/.gitignore and frontend/.gitignore
