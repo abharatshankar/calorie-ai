@@ -1,4 +1,3 @@
-from functools import lru_cache
 from http import HTTPStatus
 from uuid import UUID
 
@@ -6,11 +5,7 @@ from fastapi import APIRouter, Depends, File, Query, Response, UploadFile, statu
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies.auth import get_current_user
-from app.api.dependencies.uploads import (
-    get_storage_service,
-    validate_upload_metadata,
-    validate_upload_size,
-)
+from app.api.v1.uploads import get_storage_service, validate_upload_metadata, validate_upload_size
 from app.db.session import get_db_session
 from app.models.food_log import FoodLog
 from app.models.user import User
@@ -33,15 +28,8 @@ def get_food_log_service(
     return FoodLogService(session)
 
 
-@lru_cache
-def _get_ai_provider() -> OpenAIProvider:
-    return OpenAIProvider()
-
-
 def get_ai_service() -> AIService:
-    # The OpenAI provider owns an httpx connection pool; reuse a single instance
-    # instead of building a new client (and pool) on every request.
-    return AIService(ai_provider=_get_ai_provider())
+    return AIService(ai_provider=OpenAIProvider())
 
 
 @router.post(
@@ -63,8 +51,8 @@ async def create_food_log(
     response_model=FoodLogListPublicResponse,
     summary="List food logs for the authenticated user",
     description=(
-        "Returns the authenticated user's food logs sorted by latest first. "
-        "Supports pagination and case-insensitive search by detected food name."
+        "Returns the authenticated user's food logs sorted by latest first. Supports "
+        "pagination and case-insensitive search by detected food name."
     ),
 )
 async def list_food_logs(
@@ -93,8 +81,8 @@ async def list_food_logs(
     status_code=status.HTTP_201_CREATED,
     summary="Analyze a food image with AI and save the food log",
     description=(
-        "Uploads a food image, analyzes it with OpenAI Vision, and returns the food "
-        "log entry. Raw AI response is stored but not exposed to clients."
+        "Uploads a food image, analyzes it with OpenAI Vision, and returns the food log "
+        "entry. Raw AI response is stored but not exposed to clients."
     ),
     responses={
         HTTPStatus.BAD_REQUEST: {"description": "Invalid image upload or unsupported image"},
@@ -119,10 +107,7 @@ async def analyze_food_image(
     validate_upload_size(content)
 
     image_url, _ = await storage_service.save_upload(file=file, content=content)
-    analysis, raw_ai_response = await ai_service.analyze_food_image(
-        image_url=image_url,
-        image_bytes=content,
-    )
+    analysis, raw_ai_response = await ai_service.analyze_food_image(image_url=image_url)
 
     payload = FoodLogCreateRequest(
         image_url=image_url,

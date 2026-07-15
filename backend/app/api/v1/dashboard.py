@@ -9,7 +9,8 @@ from app.models.user import User
 from app.schemas.dashboard import DashboardResponse
 from app.services.history import HistoryService
 
-router = APIRouter(prefix="/dashboard")
+
+router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
 
 def get_history_service(
@@ -22,10 +23,7 @@ def get_history_service(
     "",
     response_model=DashboardResponse,
     summary="Get user's nutrition dashboard",
-    description=(
-        "Returns daily, weekly, and monthly calorie summaries plus macronutrient "
-        "totals and total meals."
-    ),
+    description="Returns daily, weekly, and monthly calorie summaries plus macronutrient totals and total meals.",
     responses={HTTPStatus.UNAUTHORIZED: {"description": "Invalid or missing token"}},
 )
 async def get_dashboard(

@@ -1,14 +1,12 @@
 from datetime import date
-from http import HTTPStatus
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.exceptions.base import AppException
-from app.models.food_log import FoodLog
 from app.repositories.history import HistoryRepository
 from app.schemas.dashboard import DashboardResponse
-from app.schemas.foods import FoodLogListPublicResponse
+from app.schemas.foods import FoodLogListResponse, FoodLogResponse
 
 
 class HistoryService:
@@ -25,7 +23,7 @@ class HistoryService:
         search: str | None,
         start_date: date | None,
         end_date: date | None,
-    ) -> FoodLogListPublicResponse:
+    ) -> FoodLogListResponse:
         total = await self.history.count_by_user(
             user_id=user_id,
             search=search,
@@ -40,9 +38,17 @@ class HistoryService:
             start_date=start_date,
             end_date=end_date,
         )
-        return FoodLogListPublicResponse.paginate(items=items, total=total, page=page, size=size)
+        pages = (total + size - 1) // size if total else 0
 
-    async def get_for_user(self, *, history_id: UUID, user_id: UUID) -> FoodLog:
+        return FoodLogListResponse(
+            items=items,
+            total=total,
+            page=page,
+            size=size,
+            pages=pages,
+        )
+
+    async def get_for_user(self, *, history_id: UUID, user_id: UUID) -> FoodLogResponse:
         history_item = await self.history.get_by_id_for_user(
             history_id=history_id,
             user_id=user_id,
@@ -50,7 +56,7 @@ class HistoryService:
         if history_item is None:
             raise AppException(
                 "History entry was not found.",
-                status_code=HTTPStatus.NOT_FOUND,
+                status_code=404,
                 error_code="history_not_found",
             )
         return history_item
@@ -63,7 +69,7 @@ class HistoryService:
         if not deleted:
             raise AppException(
                 "History entry was not found.",
-                status_code=HTTPStatus.NOT_FOUND,
+                status_code=404,
                 error_code="history_not_found",
             )
         await self.session.commit()

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,16 +17,28 @@ import '../../features/upload/presentation/screens/home_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>(
   (ref) {
-    final authState = ref.watch(authControllerProvider);
+    // Re-run redirects when the auth status changes WITHOUT rebuilding the
+    // GoRouter. Rebuilding the router (e.g. via ref.watch) would reset it to
+    // the initial location and discard the current navigation stack, so we
+    // drive refreshes through a Listenable instead and read the auth status
+    // inside the redirect callback.
+    final authRefresh = ValueNotifier<int>(0);
+    ref.listen(
+      authControllerProvider.select((state) => state.status),
+      (_, _) => authRefresh.value++,
+    );
+    ref.onDispose(authRefresh.dispose);
 
     return GoRouter(
       initialLocation: AppRoute.splash.path,
+      refreshListenable: authRefresh,
       redirect: (context, state) {
+        final status = ref.read(authControllerProvider).status;
         final location = state.uri.path;
         final isAuthRoute = location == AppRoute.login.path ||
             location == AppRoute.register.path;
 
-        return switch (authState.status) {
+        return switch (status) {
           AuthStatus.checking => location == AppRoute.splash.path
               ? null
               : AppRoute.splash.path,

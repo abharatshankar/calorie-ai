@@ -18,6 +18,7 @@ from app.exceptions.base import AppException
 from app.providers.ai import AIProvider
 from app.schemas.ai import NutritionAnalysisResponse
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -86,24 +87,15 @@ class OpenAIProvider(AIProvider):
                 error_code="openai_api_key_missing",
             )
 
-        # The SDK default timeout is 600s; a hung upstream call would otherwise
-        # hold a worker (and DB/HTTP resources) for ten minutes. Bound it and
-        # cap retries so failures surface quickly and predictably.
-        self.client = AsyncOpenAI(
-            api_key=settings.openai_api_key,
-            timeout=settings.openai_timeout_seconds,
-            max_retries=settings.openai_max_retries,
-        )
+        self.client = AsyncOpenAI(api_key=settings.openai_api_key)
         self.model = settings.openai_vision_model
 
-    async def analyze_food_image(
-        self, *, image_data_url: str
-    ) -> tuple[NutritionAnalysisResponse, dict[str, Any]]:
+    async def analyze_food_image(self, *, image_data_url: str) -> tuple[NutritionAnalysisResponse, dict[str, Any]]:
         try:
             logger.info(
                 "Sending AI nutrition analysis request: model=%s image_data_url=%s",
                 self.model,
-                image_data_url[:120],
+                image_data_url[:120] if len(image_data_url) > 120 else image_data_url,
             )
             response = await self.client.responses.create(
                 model=self.model,

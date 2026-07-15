@@ -163,8 +163,8 @@ class _DashboardContent extends StatelessWidget {
         const SizedBox(height: 12),
         RecentMealsCard(
           meals: data.recentMeals,
-          onViewAll: () => context.go(AppRoute.history.path),
-          onTapMeal: (id) => context.go(AppRoute.historyDetail.pathFor(id)),
+          onViewAll: () => context.push(AppRoute.history.path),
+          onTapMeal: (id) => context.push(AppRoute.historyDetail.pathFor(id)),
         ),
       ],
     );

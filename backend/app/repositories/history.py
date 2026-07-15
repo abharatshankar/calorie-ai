@@ -1,9 +1,8 @@
 from datetime import date
 from uuid import UUID
 
-from sqlalchemy import case, delete, func, select, text
+from sqlalchemy import case, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import defer
 
 from app.models.food_log import FoodLog
 
@@ -22,10 +21,7 @@ class HistoryRepository:
         start_date: date | None,
         end_date: date | None,
     ) -> list[FoodLog]:
-        # ai_response is not part of the history payload; defer the JSONB column.
-        query = (
-            select(FoodLog).where(FoodLog.user_id == user_id).options(defer(FoodLog.ai_response))
-        )
+        query = select(FoodLog).where(FoodLog.user_id == user_id)
 
         if search:
             query = query.where(FoodLog.detected_food_name.ilike(f"%{search}%"))
@@ -36,7 +32,11 @@ class HistoryRepository:
         if end_date is not None:
             query = query.where(func.date(FoodLog.created_at) <= end_date)
 
-        query = query.order_by(FoodLog.created_at.desc()).offset((page - 1) * size).limit(size)
+        query = (
+            query.order_by(FoodLog.created_at.desc())
+            .offset((page - 1) * size)
+            .limit(size)
+        )
 
         result = await self.session.execute(query)
         return list(result.scalars().all())
@@ -65,24 +65,26 @@ class HistoryRepository:
 
     async def get_by_id_for_user(self, *, history_id: UUID, user_id: UUID) -> FoodLog | None:
         result = await self.session.execute(
-            select(FoodLog)
-            .where(
+            select(FoodLog).where(
                 FoodLog.id == history_id,
                 FoodLog.user_id == user_id,
             )
-            .options(defer(FoodLog.ai_response))
         )
         return result.scalar_one_or_none()
 
     async def delete_by_id_for_user(self, *, history_id: UUID, user_id: UUID) -> bool:
-        # Single-round-trip bulk delete instead of SELECT-then-delete.
         result = await self.session.execute(
-            delete(FoodLog).where(
+            select(FoodLog).where(
                 FoodLog.id == history_id,
                 FoodLog.user_id == user_id,
             )
         )
-        return result.rowcount > 0
+        food_log = result.scalar_one_or_none()
+        if not food_log:
+            return False
+
+        await self.session.delete(food_log)
+        return True
 
     async def get_dashboard_summary(self, *, user_id: UUID) -> dict[str, object]:
         today_calories = func.coalesce(

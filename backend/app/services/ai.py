@@ -1,4 +1,3 @@
-import asyncio
 import base64
 import logging
 from http import HTTPStatus
@@ -8,6 +7,7 @@ from typing import Any
 from app.exceptions.base import AppException
 from app.providers.ai import AIProvider
 from app.schemas.ai import NutritionAnalysisResponse
+
 
 logger = logging.getLogger(__name__)
 
@@ -21,17 +21,12 @@ class AIService:
         self,
         *,
         image_url: str,
-        image_bytes: bytes | None = None,
     ) -> tuple[NutritionAnalysisResponse, dict[str, Any]]:
         logger.info("AI food analysis requested for image_url=%s", image_url)
-        image_data_url = await self._resolve_image_data_url(image_url, image_bytes)
+        image_data_url = self._resolve_image_data_url(image_url)
         return await self.ai_provider.analyze_food_image(image_data_url=image_data_url)
 
-    async def _resolve_image_data_url(
-        self,
-        image_url: str,
-        image_bytes: bytes | None = None,
-    ) -> str:
+    def _resolve_image_data_url(self, image_url: str) -> str:
         if image_url.startswith("data:image/"):
             return image_url
 
@@ -53,20 +48,15 @@ class AIService:
                 error_code="invalid_image_url",
             )
 
+        if not image_path.exists() or not image_path.is_file():
+            raise AppException(
+                "Uploaded image was not found.",
+                status_code=HTTPStatus.NOT_FOUND,
+                error_code="uploaded_image_not_found",
+            )
+
         mime_type = self._mime_type_for_path(image_path)
-
-        # Reuse the in-memory upload bytes when available to avoid a redundant read.
-        raw_bytes = image_bytes
-        if raw_bytes is None:
-            if not image_path.exists() or not image_path.is_file():
-                raise AppException(
-                    "Uploaded image was not found.",
-                    status_code=HTTPStatus.NOT_FOUND,
-                    error_code="uploaded_image_not_found",
-                )
-            raw_bytes = await asyncio.to_thread(image_path.read_bytes)
-
-        encoded_image = base64.b64encode(raw_bytes).decode("utf-8")
+        encoded_image = base64.b64encode(image_path.read_bytes()).decode("utf-8")
         return f"data:{mime_type};base64,{encoded_image}"
 
     @staticmethod

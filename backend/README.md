@@ -1,190 +1,110 @@
-# Calorie AI — Backend
+# Calorie AI Backend
 
-A FastAPI backend for an AI-powered calorie tracking app. Users upload a photo of a
-meal, an OpenAI vision model estimates its nutrition, and results are stored and
-surfaced through history and dashboard endpoints.
+Production-ready FastAPI backend for the AI-powered calorie tracking application.
 
-**Stack:** FastAPI · SQLAlchemy 2.0 (async) · asyncpg · PostgreSQL · Pydantic v2 ·
-Alembic · PyJWT · bcrypt · OpenAI · Uvicorn
+## Overview
 
----
-
-## Features
-
-- JWT authentication with rotating, hashed refresh tokens
-- AI meal-image nutrition analysis (OpenAI vision), with the raw provider response
-  retained server-side but never exposed to clients
-- Food logging, searchable/paginated history, and a nutrition dashboard
-- Async database access with a clean API → service → repository layering
-- Centralized error handling with a consistent `{ detail, error_code }` envelope
-- Configurable CORS, security headers, auth rate limiting, and secret-strength
-  validation that fails fast in production
-- Versioned schema via Alembic migrations
-
----
-
-## Project structure
-
-```
-backend/
-├── app/
-│   ├── api/
-│   │   ├── dependencies/   # shared deps: auth, rate limiting, upload validation
-│   │   └── v1/             # versioned routers (auth, foods, history, dashboard, ...)
-│   ├── config/             # settings + constants
-│   ├── core/               # logging setup
-│   ├── db/                 # engine, session, declarative base
-│   ├── exceptions/         # AppException + handlers
-│   ├── models/             # SQLAlchemy ORM models
-│   ├── providers/          # AIProvider abstraction + OpenAI implementation
-│   ├── repositories/       # data-access layer
-│   ├── schemas/            # Pydantic request/response models
-│   ├── security/           # JWT, password hashing, opaque tokens
-│   ├── services/           # business logic
-│   └── main.py             # app factory, middleware, router wiring
-├── alembic/                # migration environment + versions
-├── tests/                  # pytest suite
-├── docker-compose.yml      # PostgreSQL (+ optional pgAdmin) for local dev
-└── pyproject.toml
-```
-
----
+This backend provides:
+- JWT-based authentication
+- Food logging and history
+- AI image nutrition analysis using OpenAI Vision
+- PostgreSQL persistence with SQLAlchemy Async
+- Alembic migrations
+- OpenAPI documentation via Swagger
 
 ## Prerequisites
 
 - Python 3.12
-- PostgreSQL 16 (or use the bundled `docker-compose.yml`)
-- An OpenAI API key
+- PostgreSQL
+- [`uvicorn`](https://www.uvicorn.org/) for local development
+- OpenAI API key
 
----
-
-## Getting started
-
-### 1. Install dependencies
+## Setup
 
 ```bash
+cd /Users/madhurikarthik/Documents/calorie_ai/backend
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -e ".[dev]"
+python -m pip install -e .
 ```
 
-### 2. Configure environment
+## Environment Variables
 
-Copy the example file and fill in your values:
+Create a `.env` file at the backend root with the following values:
 
-```bash
-cp .env.example .env
+```env
+APP_NAME=Calorie AI
+APP_ENV=development
+APP_VERSION=0.1.0
+APP_DESCRIPTION=AI-powered calorie tracking backend
+DEBUG=true
+POSTGRES_DB=your_db
+POSTGRES_USER=your_user
+POSTGRES_PASSWORD=your_password
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+DATABASE_URL=postgresql+asyncpg://your_user:your_password@localhost:5432/your_db
+JWT_SECRET_KEY=your_access_secret
+JWT_REFRESH_SECRET_KEY=your_refresh_secret
+JWT_ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=15
+REFRESH_TOKEN_EXPIRE_DAYS=30
+OPENAI_API_KEY=your_openai_api_key
+OPENAI_VISION_MODEL=gpt-image-1
 ```
 
-See [Configuration](#configuration) for the full list of variables.
+> Note: `DATABASE_URL` is required by both the app and Alembic.
 
-### 3. Start PostgreSQL
+## Database Migrations
 
-Using Docker (recommended for local dev):
-
-```bash
-docker compose up -d postgres
-```
-
-### 4. Run migrations
+Run migrations before starting the app:
 
 ```bash
+cd /Users/madhurikarthik/Documents/calorie_ai/backend
+source .venv/bin/activate
 alembic upgrade head
 ```
 
-### 5. Run the API
+## Run the App
 
 ```bash
+cd /Users/madhurikarthik/Documents/calorie_ai/backend
+source .venv/bin/activate
 uvicorn app.main:app --reload
 ```
 
-The API is available at `http://localhost:8000`. Interactive docs (Swagger UI) are
-served at `http://localhost:8000/docs` **when `DEBUG` is enabled** — they are
-disabled automatically in production.
+## API Documentation
 
----
+Swagger UI is available at:
 
-## Configuration
-
-All configuration is provided via environment variables (loaded from `.env`).
-
-| Variable | Description | Example |
-|---|---|---|
-| `APP_NAME` | Application name | `Calorie AI Backend` |
-| `APP_ENV` | `development` / `production` | `development` |
-| `APP_VERSION` | Semantic version | `0.1.0` |
-| `APP_DESCRIPTION` | Description shown in OpenAPI | `AI Nutrition Backend` |
-| `DEBUG` | Verbose logging + docs exposure | `true` |
-| `CORS_ORIGINS` | Comma-separated allowed origins (empty = disabled) | `https://app.example.com` |
-| `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | Database credentials | — |
-| `POSTGRES_HOST` / `POSTGRES_PORT` | Database host/port | `localhost` / `5432` |
-| `DATABASE_URL` | Async SQLAlchemy URL (used by app **and** Alembic) | `postgresql+asyncpg://user:pass@localhost:5432/calorie_ai` |
-| `DB_POOL_SIZE` / `DB_MAX_OVERFLOW` | Connection pool tuning | `10` / `20` |
-| `JWT_SECRET_KEY` / `JWT_REFRESH_SECRET_KEY` | JWT signing secrets (≥32 chars in prod) | — |
-| `JWT_ALGORITHM` | JWT algorithm | `HS256` |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | Access token lifetime | `30` |
-| `REFRESH_TOKEN_EXPIRE_DAYS` | Refresh token lifetime | `7` |
-| `OPENAI_API_KEY` | OpenAI API key | — |
-| `OPENAI_VISION_MODEL` | Vision-capable model | `gpt-4.1-mini` |
-| `OPENAI_TIMEOUT_SECONDS` / `OPENAI_MAX_RETRIES` | Upstream call bounds | `30` / `2` |
-
-> In production (`APP_ENV=production`) the app refuses to start with placeholder or
-> weak JWT secrets, with `DEBUG` enabled, or with a wildcard CORS origin.
-
----
-
-## Testing
-
-```bash
-pytest
+```
+http://localhost:8000/docs
 ```
 
-The suite covers security primitives (password hashing, JWT round-trips),
-configuration invariants, and the health endpoint. It does not require a database.
+## How to Test
 
----
+### Authentication
+1. Register via `POST /api/v1/auth/register`
+2. Login via `POST /api/v1/auth/login`
+3. Copy the returned `access_token`
+4. Click `Authorize` in Swagger and paste `Bearer <access_token>`
 
-## API overview
+### Food History
+- `GET /api/v1/history`
+- `GET /api/v1/history/{id}`
+- `DELETE /api/v1/history/{id}`
 
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/api/v1/auth/register` | Create an account |
-| `POST` | `/api/v1/auth/login` | Obtain access + refresh tokens |
-| `POST` | `/api/v1/auth/refresh` | Rotate a refresh token |
-| `GET`  | `/api/v1/auth/me` | Current user |
-| `POST` | `/api/v1/upload` | Upload a food image |
-| `POST` | `/api/v1/foods/analyze` | Analyze an image and log the result |
-| `GET`  | `/api/v1/foods` | List food logs (paginated, searchable) |
-| `GET`/`DELETE` | `/api/v1/foods/{id}` | Fetch / delete a food log |
-| `GET`  | `/api/v1/history` | Food history (date filters) |
-| `GET`  | `/api/v1/dashboard` | Nutrition summary |
-| `GET`  | `/api/v1/health` | Health check |
+### Dashboard
+- `GET /api/v1/dashboard`
 
-Authenticate by sending `Authorization: Bearer <access_token>`.
+### AI Food Analysis
+- `POST /api/v1/foods/analyze`
+- Attach an image file in the request body
 
----
+## Production Notes
 
-## Code quality
-
-```bash
-ruff check .        # lint
-ruff format .       # format
-mypy app            # type-check
-```
-
----
-
-## Production notes
-
-- Store secrets in a secrets manager, never in the image or repo.
-- Use managed object storage / a CDN for uploads instead of the local `uploads/` dir.
-- Move rate limiting to a shared store (e.g. Redis) when running multiple workers.
-- Run behind a production ASGI setup (e.g. `uvicorn`/`gunicorn` workers) and a proxy
-  that enforces request body-size limits and TLS.
-
----
-
-## License
-
-Released under the [MIT License](LICENSE).
+- Use environment variables to store secrets.
+- Use a managed object storage or CDN for production image uploads instead of local `uploads/`.
+- Ensure proper database backups and monitoring.
+- Run the app behind a production-grade ASGI server or load balancer.

@@ -11,7 +11,7 @@ from app.models.user import User
 from app.schemas.foods import FoodLogListPublicResponse, FoodLogPublicResponse
 from app.services.history import HistoryService
 
-router = APIRouter(prefix="/history")
+router = APIRouter(prefix="/history", tags=["History"])
 
 
 def get_history_service(

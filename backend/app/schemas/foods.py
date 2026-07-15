@@ -20,7 +20,16 @@ class FoodLogCreateRequest(BaseModel):
 
 
 class FoodLogBaseResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True, ser_json_by_alias=True)
+    # populate_by_name lets the model be built from either the field name
+    # ("food_name") or its alias ("detected_food_name"). This is required so
+    # the public response models can re-validate the internal FoodLog*Response
+    # objects returned by the service layer (whose attribute is "food_name"),
+    # while still reading the ORM attribute and serialising JSON by alias.
+    model_config = ConfigDict(
+        from_attributes=True,
+        ser_json_by_alias=True,
+        populate_by_name=True,
+    )
 
     id: UUID
     food_name: str = Field(alias="detected_food_name")
@@ -45,6 +54,17 @@ class FoodLogPublicResponse(FoodLogBaseResponse):
     updated_at: datetime
 
 
+class FoodLogResponse(FoodLogBaseResponse):
+    """
+    Internal response with all fields including ai_response.
+    Should only be used internally; do not expose to API consumers.
+    """
+
+    user_id: UUID
+    ai_response: dict[str, Any] | None
+    updated_at: datetime
+
+
 class FoodLogListPublicResponse(BaseModel):
     """
     Paginated public response for food history and dashboard.
@@ -57,14 +77,14 @@ class FoodLogListPublicResponse(BaseModel):
     size: int
     pages: int
 
-    @classmethod
-    def paginate(
-        cls,
-        *,
-        items: list[Any],
-        total: int,
-        page: int,
-        size: int,
-    ) -> "FoodLogListPublicResponse":
-        pages = (total + size - 1) // size if total and size else 0
-        return cls(items=items, total=total, page=page, size=size, pages=pages)
+
+class FoodLogListResponse(BaseModel):
+    """
+    Internal paginated response with all fields.
+    """
+
+    items: list[FoodLogResponse]
+    total: int
+    page: int
+    size: int
+    pages: int

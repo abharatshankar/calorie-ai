@@ -143,7 +143,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   scrollController: _scrollController,
                   onRetry: () =>
                       ref.read(historyControllerProvider.notifier).refresh(),
-                  onTapItem: (id) => context.go(
+                  onTapItem: (id) => context.push(
                     AppRoute.historyDetail.pathFor(id),
                   ),
                 ),

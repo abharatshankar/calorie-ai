@@ -14,25 +14,59 @@ class CalorieSummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon),
-            const SizedBox(height: 16),
-            Text(title, style: Theme.of(context).textTheme.labelLarge),
-            const SizedBox(height: 4),
-            Text(
-              calories.toString(),
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            Text(
-              'kcal',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final availableHeight = constraints.maxHeight;
+            final hasBoundedHeight = availableHeight.isFinite;
+
+            final iconSize = hasBoundedHeight
+                ? (availableHeight * 0.22).clamp(18.0, 28.0)
+                : 24.0;
+            final primaryGap = hasBoundedHeight
+                ? (availableHeight * 0.12).clamp(6.0, 16.0)
+                : 16.0;
+            final secondaryGap = (primaryGap * 0.25).clamp(2.0, 4.0);
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: iconSize),
+                SizedBox(height: primaryGap),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(title, style: theme.textTheme.labelLarge),
+                  ),
+                ),
+                SizedBox(height: secondaryGap),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: RichText(
+                      text: TextSpan(
+                        style: theme.textTheme.headlineSmall,
+                        children: [
+                          TextSpan(text: calories.toString()),
+                          TextSpan(
+                            text: ' kcal',
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ),
     );

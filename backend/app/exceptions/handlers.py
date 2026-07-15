@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app.exceptions.base import AppException
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -47,21 +48,14 @@ def register_exception_handlers(app: FastAPI) -> None:
         request: Request,
         exc: RequestValidationError,
     ) -> JSONResponse:
-        # Pydantic v2 error dicts embed the offending "input" (and sometimes "ctx"),
-        # which would echo submitted secrets such as passwords back to the client and
-        # into logs. Strip those fields before logging or returning the response.
-        sanitized_errors = [
-            {"type": error.get("type"), "loc": error.get("loc"), "msg": error.get("msg")}
-            for error in exc.errors()
-        ]
         logger.info(
             "Validation exception: path=%s errors=%s",
             request.url.path,
-            sanitized_errors,
+            exc.errors(),
         )
         return JSONResponse(
             status_code=422,
-            content={"detail": sanitized_errors, "error_code": "validation_error"},
+            content={"detail": exc.errors(), "error_code": "validation_error"},
         )
 
     @app.exception_handler(Exception)

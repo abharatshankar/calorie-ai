@@ -32,7 +32,7 @@ class HomeScreen extends ConsumerWidget {
       if (nextValue?.isSuccess == true &&
           uploadedImage != null &&
           selectedImage != null) {
-        context.go(
+        context.push(
           AppRoute.analysis.path,
           extra: AnalysisImage(
             path: selectedImage.path,
@@ -54,7 +54,7 @@ class HomeScreen extends ConsumerWidget {
           IconButton(
             onPressed: uploadValue.isLoading
                 ? null
-                : () => context.go(AppRoute.settings.path),
+                : () => context.push(AppRoute.settings.path),
             icon: const Icon(Icons.settings_outlined),
           ),
           TextButton(
@@ -131,7 +131,7 @@ class HomeScreen extends ConsumerWidget {
             OutlinedButton.icon(
               onPressed: uploadValue.isLoading
                   ? null
-                  : () => context.go(AppRoute.dashboard.path),
+                  : () => context.push(AppRoute.dashboard.path),
               icon: const Icon(Icons.dashboard_outlined),
               label: const Text('Dashboard'),
             ),
@@ -139,7 +139,7 @@ class HomeScreen extends ConsumerWidget {
             OutlinedButton.icon(
               onPressed: uploadValue.isLoading
                   ? null
-                  : () => context.go(AppRoute.history.path),
+                  : () => context.push(AppRoute.history.path),
               icon: const Icon(Icons.history),
               label: const Text('Meal History'),
             ),
